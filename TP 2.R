@@ -1,5 +1,6 @@
 # Trabajo Practico Nº2 - Scrapeo
 
+
 # Primero vamos a cargar las librerias necesarias para realizar el trabajo. En primer lugar vamos a cargars tidyverse y luego para este caso puntual sera necesario que instalaemos y carguemos rvest.
 # Rvest puntualmente nos va a permitir extraer datos de las paginas webs.
 
@@ -90,4 +91,50 @@ tabla_casosxbarrio <-tabla_casosxbarrio %>%
   mutate(Casosconfirmados=as.numeric(tabla_casosxbarrio$Casosconfirmados))
 
 tabla_casosxbarrio
+
+
+# Ahora para poder analizar los datos en conjunto, vamos a unir las dos tablas y veremos cual es la relacion entre numeros de contagiados en la ciudad formal y los habitantes de las villas y asentamientos
+
+
+CiudadformalVsCiudadinformal <- left_join(tabla_casosxbarrio, Casos_villasXbarrio, by="Barrio")
+
+# Como los barrios que no tiene villas tienen la variable "CasosAsentamientos" vacia y para este estudio puntual no nos interesan, los filtramos
+
+CiudadformalVsCiudadinformal <- CiudadformalVsCiudadinformal %>% 
+  filter(!is.na(CasosAsentamientos))
+
+# Para finalizar este analisis queremos comparar los porcentajes de la poblacion que tuvo covid.
+
+CiudadformalVsCiudadinformal <-CiudadformalVsCiudadinformal %>% 
+  mutate(Casosconfirmados=as.numeric(CiudadformalVsCiudadinformal$Casosconfirmados)) %>% 
+  mutate(CasosAsentamientos=as.numeric(CiudadformalVsCiudadinformal$CasosAsentamientos))
+
+str(CiudadformalVsCiudadinformal)
+
+CiudadformalVsCiudadinformal
+
+
+
+PRUEBA <-CiudadformalVsCiudadinformal %>% 
+  as.numeric(CiudadformalVsCiudadinformal$Población)
+
+
+PRUEBA
+
+PRUEBA <- CiudadformalVsCiudadinformal %>% 
+  mutate(PCT_CiudadFormal= Casosconfirmados * 100 / Población) %>% 
+  mutate(PCT_CiudadInformal = CasosAsentamientos * 100 / Población)
+
+
+rm(PRUEBA)
+
+
+CiudadformalVsCiudadinformal <- CiudadformalVsCiudadinformal %>% 
+  mutate(PCT_CiudadFormal= Casosconfirmados * 100) %>% 
+  mutate(PCT_CiudadInformal = CasosAsentamientos * 100)
+
+
+
+
+rm(CiudadformalVsCiudadinformal)
 
