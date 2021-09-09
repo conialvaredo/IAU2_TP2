@@ -10,7 +10,9 @@ library(tidyverse) # "No used functions found"
 library(rvest) # read_html
 library(stringr)
 
-# Para este trabajo vamos a buscar datos relacionados a los casos de Covid19 para la ciudad de Buenos Aires
+# Para este trabajo vamos a buscar datos relacionados a los casos de Covid19 para la ciudad de Buenos Aires.
+# Encontramos en link de wikipedia que tiene infromacion detallada de como fue la evolucion de la pandemia en la ciudad, y tiene un par de tablas con informacion acerca de los casos confirmados
+
 
 url <- "https://es.wikipedia.org/wiki/Pandemia_de_COVID-19_en_la_Ciudad_Aut%C3%B3noma_de_Buenos_Aires"
 
@@ -25,6 +27,7 @@ covidcaba
 casosXbarrio <- covidcaba %>% 
   html_elements(".mw-parser-output div td:nth-child(1) div") %>% 
   html_table()
+
 
 casosXbarrio
 
@@ -61,17 +64,17 @@ tabla_casosXvilla
 
 # Ahora queremos estudiar cual es la relacion entre el numero de habitatnes que contrajo covid que vive en la ciudad formal y los que no.
 
-# Primero trabajaremos con los datos de casos por villas. Vamos a transformar a factor los datos de la Zona y el Barrio y a numero el de Casos confirmados
+# Para esto, primero trabajaremos con los datos de casos por villas. Vamos a transformar a factor los datos de la Zona y el Barrio y a numero el de Casos confirmados
 
 
 tabla_casosXvilla <-tabla_casosXvilla %>% 
-  mutate(Zona=as.factor(tabla_casosXvilla$Zona)) %>% 
-  mutate(Barrio=as.factor(tabla_casosXvilla$Barrio)) %>% 
-  mutate(Casosconfirmados=as.numeric(tabla_casosXvilla$Casosconfirmados))
+  mutate(Zona=as.factor(Zona)) %>% 
+  mutate(Barrio=as.factor(Barrio)) %>% 
+  mutate(Casosconfirmados=as.numeric(Casosconfirmados))
 
 tabla_casosXvilla
 
-#Lo que nos interesa es agrupar las villas o asentamientos por barrio para saber cual es el total de poblacion por barrio que vive en villas o asentamiento y tuvo Covid
+#Nos interesa agrupar las villas y asentamientos por barrio para saber cual es el total de poblacion por barrio que vive en villas o asentamiento que tuvo Covid
 
 Casos_villasXbarrio <- tabla_casosXvilla %>% 
   group_by(Barrio) %>% 
@@ -83,58 +86,62 @@ Casos_villasXbarrio
 
 tabla_casosxbarrio
 
-# Acomodamos los datos, primero vamos a transformar a factor los datos de Barrio y a numero el de Poblacion y el de Casos confirmados
+#Acomodamos los datos. Primero vamos a transformar a factor los datos de Barrio y a numero el de Poblacion y el de Casos confirmados
 
-tabla_casosxbarrio <-tabla_casosxbarrio %>% 
-  mutate(Barrio=as.factor(tabla_casosxbarrio$Barrio)) %>% 
-  mutate(Población=as.factor(tabla_casosxbarrio$Población)) %>% 
-  mutate(Casosconfirmados=as.numeric(tabla_casosxbarrio$Casosconfirmados))
+tabla_casosxbarrio <- tabla_casosxbarrio %>% 
+  mutate(Población = str_remove_all(string = Población, pattern = " ")) 
+
+tabla_casosxbarrio <- tabla_casosxbarrio %>%  
+  mutate(Barrio=as.factor(Barrio)) %>% 
+  mutate(across(.cols = c(Población, Casosconfirmados), .fns = ~as.numeric(.)))
+
 
 tabla_casosxbarrio
 
 
-# Ahora para poder analizar los datos en conjunto, vamos a unir las dos tablas y veremos cual es la relacion entre numeros de contagiados en la ciudad formal y los habitantes de las villas y asentamientos
+# Ahora para poder analizar los datos en conjunto, vamos a unir las dos tablas y veremos cual es la relacion entre numeros de contagiados en la ciudad formal y en la ciudad informal
 
 
 CiudadformalVsCiudadinformal <- left_join(tabla_casosxbarrio, Casos_villasXbarrio, by="Barrio")
 
-# Como los barrios que no tiene villas tienen la variable "CasosAsentamientos" vacia y para este estudio puntual no nos interesan, los filtramos
+# Como en los barrios que no tiene villas,la variable "CasosAsentamientos" queda vacia y para este estudio puntual no son neceesarios, los filtramos
 
 CiudadformalVsCiudadinformal <- CiudadformalVsCiudadinformal %>% 
   filter(!is.na(CasosAsentamientos))
 
 # Para finalizar este analisis queremos comparar los porcentajes de la poblacion que tuvo covid.
-
-CiudadformalVsCiudadinformal <-CiudadformalVsCiudadinformal %>% 
-  mutate(Casosconfirmados=as.numeric(CiudadformalVsCiudadinformal$Casosconfirmados)) %>% 
-  mutate(CasosAsentamientos=as.numeric(CiudadformalVsCiudadinformal$CasosAsentamientos))
-
-str(CiudadformalVsCiudadinformal)
-
-CiudadformalVsCiudadinformal
-
-
-
-PRUEBA <-CiudadformalVsCiudadinformal %>% 
-  as.numeric(CiudadformalVsCiudadinformal$Población)
-
-
-PRUEBA
-
-PRUEBA <- CiudadformalVsCiudadinformal %>% 
-  mutate(PCT_CiudadFormal= Casosconfirmados * 100 / Población) %>% 
-  mutate(PCT_CiudadInformal = CasosAsentamientos * 100 / Población)
-
-
-rm(PRUEBA)
+# Para esto calcularemos los porcentajes para cada barrio de población con Covid, pero antes le restaremos al total de los casos confirmados el valor de los casos confirmados en Asentamientos para tener los datos separados, ya que entendemos que los casos confirmados por barrio hace referencia al total 
 
 
 CiudadformalVsCiudadinformal <- CiudadformalVsCiudadinformal %>% 
-  mutate(PCT_CiudadFormal= Casosconfirmados * 100) %>% 
-  mutate(PCT_CiudadInformal = CasosAsentamientos * 100)
+  mutate(CasosCFormal= Casosconfirmados - CasosAsentamientos) %>% 
+  rename(CasosCInformal = CasosAsentamientos)
 
+#Vemos que en el Barrio de Pompeya hay un error, porque los casos de confirmados en villas y asentamientos es mayor al total, por ende los casos para la ciudad formal quedan en negativo. Para poder continuar con el analisis filtraremos al barrio, y trabajaremos con el resto. 
 
+CiudadformalVsCiudadinformal <- CiudadformalVsCiudadinformal %>% 
+  filter(Barrio != "Nueva Pompeya")
 
+CiudadformalVsCiudadinformal
 
-rm(CiudadformalVsCiudadinformal)
+#Ahora si, una vez desagregado este dato, calculamos los porcentajes
 
+PCT_CiudadFvsCInformal <- CiudadformalVsCiudadinformal %>% 
+  mutate(PCT_CiudadFormal= CasosCFormal * 100 / Población) %>% 
+  mutate(PCT_CiudadInformal = CasosCInformal * 100 / Población)
+
+PCT_CiudadFvsCInformal
+
+#De esta manera vemos el porcentaje de la poblacion que tuvo covid en la ciudad formal y en la informal, pero concideramos que para el analisis, lo mas rico es ver como se distribuye en porcentaje de contagiados
+
+PCT2_CiudadFvsCInformal <- CiudadformalVsCiudadinformal %>% 
+  mutate(PCT_CiudadFormal= CasosCFormal * 100 / Casosconfirmados) %>% 
+  mutate(PCT_CiudadInformal = CasosCInformal * 100 / Casosconfirmados)
+
+PCT2_CiudadFvsCInformal
+
+# De esta manera podemos ver que el Barrio con mayor diferencia entre los contagiados que viven en los barrios informales y los que no, es el barrio de Retiro en donde casi el 80% de las personas que tuvieron covid viven en la Villa 31.
+
+# Vamos a guardar la informacion obtenida para poder trabajar con la misma y visualizarla en Trabajo Practico Nº3
+ 
+write.csv(PCT2_CiudadFvsCInformal, "PCT2_CiudadFvsCInformal")
