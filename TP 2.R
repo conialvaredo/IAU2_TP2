@@ -37,6 +37,7 @@ casosXvilla <- covidcaba %>%
   html_nodes(xpath = '//*[@id="mw-content-text"]/div[1]/div[2]/table/tbody/tr/td[2]') %>% 
   html_table()
 
+
 casosXvilla
 
 #Convertimos los datos obtenidos en dos tibble
