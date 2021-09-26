@@ -1,2 +1,2 @@
 # IAU2_TP2
-Trabajo Practico Nº2 de Instrumentos de Analisis Urbano 2 - Scrappeo
+Trabajo Práctico Nº2 de Instrumentos de Análisis Urbano 2 - Scrappeo
